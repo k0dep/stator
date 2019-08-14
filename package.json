@@ -1,0 +1,9 @@
+{
+  "name": "pro.k0dep.upm-package-template",
+  "version": "1.0.0",
+  "displayName": "UPM Template Package",
+  "author": "Stanislav Petrov @k0dep <sv.petrov@kodep.pro>",
+  "description": "Template for creating new UPM packages.",
+  "dependencies": {},
+  "unity": "2018.1"
+}
