@@ -1,4 +1,6 @@
-﻿namespace Stator
+﻿using System;
+
+namespace Stator
 {
     public class StatorContainer<TBuilder> where TBuilder : ContainerBuilder
     {

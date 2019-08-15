@@ -1,4 +1,6 @@
-﻿namespace Stator
+﻿using System.Collections.Generic;
+
+namespace Stator
 {
     public abstract class ContainerBuilder
     {
@@ -12,6 +14,28 @@
         public ContainerBuilder Add(ContainerRegistration registration)
         {
             Registrations.Add(registration);
+            return this;
+        }
+
+        public ContainerBuilder AddSingleton<TBind, TImpl>()
+        {
+            Add(new ContainerRegistration
+            {
+                TypeFront = typeof(TBind),
+                TypeBack = typeof(TImpl),
+                Lifetime = LifetimeScope.Singleton
+            });
+            return this;
+        }
+        
+        public ContainerBuilder AddSingleton<TBindAndImpl>()
+        {
+            Add(new ContainerRegistration
+            {
+                TypeFront = typeof(TBindAndImpl),
+                TypeBack = typeof(TBindAndImpl),
+                Lifetime = LifetimeScope.Singleton
+            });
             return this;
         }
     }
