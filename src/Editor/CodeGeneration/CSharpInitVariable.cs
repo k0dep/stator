@@ -28,6 +28,7 @@ namespace Stator.Editor
             }
 
             builder.Append(Name);
+            builder.Append(" = ");
 
             if(Initialization != null)
             {

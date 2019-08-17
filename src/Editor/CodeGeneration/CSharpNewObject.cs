@@ -23,7 +23,7 @@ namespace Stator.Editor
                 return b.Builder.ToString();
             });
             var arguments = string.Join(", ", argBuilders);
-            stringBuilder.AppendLine($"new {NewType.GetRightFullName()}({arguments})");
+            stringBuilder.Append($"new {NewType.GetRightFullName()}({arguments})");
         }
     }
 }
