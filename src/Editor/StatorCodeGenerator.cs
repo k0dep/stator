@@ -37,8 +37,11 @@ namespace Stator.Editor
             var code = new StringBuilder();
             var codeBuilder = new IndentedStringBuilder(code, 0);
 
-            var members = CreateSingletons(builderInstance).ToList();
+            var members = new List<CSharpClassMember>();
+            members.AddRange(CreateSingletons(builderInstance));
+            members.AddRange(CreateTransients(builderInstance));
             members.AddRange(CreateResolvers(builderInstance));
+            members = members.OrderByDescending(m => m.GetType().ToString()).ToList();
 
             var className = builder.Name;
             var type = new CSharpClass(className, members, true);
@@ -86,11 +89,11 @@ namespace Stator.Editor
         {
             var members = new List<CSharpClassMember>();
             var transients = builderInstance.Registrations
-                .Where(t => t.Lifetime == LifetimeScope.Singleton).ToArray();
+                .Where(t => t.Lifetime == LifetimeScope.Transient).ToArray();
 
             foreach (var transient in transients)
             {
-                var backResolveMethod = GetResolveName(transient.TypeFront);
+                var backResolveMethod = GetResolveName(transient.TypeBack);
 
                 var resultStatement = new CSharpInitVariable(null, "result", new CSharpInvoke(backResolveMethod, new CSharpStatement[0]));
                 var resolveBody = new CSharpStatement[]{
