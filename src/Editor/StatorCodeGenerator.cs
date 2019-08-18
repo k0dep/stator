@@ -71,11 +71,11 @@ namespace Stator.Editor
 
             foreach (var singleton in singletons)
             {
-                var fieldName = GetSingletonName(singleton.TypeFront);
-                var field = new CSharpField(singleton.TypeFront, fieldName, false);
+                var fieldName = GetSingletonName(singleton.Binding);
+                var field = new CSharpField(singleton.Binding, fieldName, false);
                 members.Add(field);
 
-                var backResolveMethod = GetResolveName(singleton.TypeBack);
+                var backResolveMethod = GetResolveName(singleton.Implementation);
                 var condition = new CSharpBinaryStatement(new CSharpSymbol(fieldName), CSharpSymbol.NULL, "==");
                 var statements = new CSharpStatement[] {
                     new CSharpBinaryStatement(new CSharpSymbol(fieldName), new CSharpInvoke(backResolveMethod, new CSharpStatement[0]), "=", true),
@@ -85,8 +85,8 @@ namespace Stator.Editor
                     ifStatement,
                     new CSharpReturn(new CSharpSymbol(fieldName))
                 };
-                var resolveName = GetResolveNameFront(singleton.TypeFront);
-                var resolveMethod = new CSharpClassMethod(singleton.TypeFront, resolveName,
+                var resolveName = GetResolveNameFront(singleton.Binding);
+                var resolveMethod = new CSharpClassMethod(singleton.Binding, resolveName,
                                                 new MethodParameter[0], true, resolveBody);
                 members.Add(resolveMethod);
             }
@@ -102,15 +102,15 @@ namespace Stator.Editor
 
             foreach (var transient in transients)
             {
-                var backResolveMethod = GetResolveName(transient.TypeBack);
+                var backResolveMethod = GetResolveName(transient.Implementation);
 
                 var resultStatement = new CSharpInitVariable(null, "result", new CSharpInvoke(backResolveMethod, new CSharpStatement[0]));
                 var resolveBody = new CSharpStatement[]{
                     resultStatement,
                     new CSharpReturn(new CSharpSymbol("result"))
                 };
-                var resolveName = GetResolveNameFront(transient.TypeFront);
-                var resolveMethod = new CSharpClassMethod(transient.TypeFront, resolveName,
+                var resolveName = GetResolveNameFront(transient.Binding);
+                var resolveMethod = new CSharpClassMethod(transient.Binding, resolveName,
                                                 new MethodParameter[0], true, resolveBody);
                 members.Add(resolveMethod);
             }
@@ -124,7 +124,7 @@ namespace Stator.Editor
 
             foreach (var registration in builderInstance.Registrations)
             {
-                var targetType = registration.TypeBack;
+                var targetType = registration.Implementation;
                 var ctor = targetType.GetConstructors()
                     .OrderBy(c => c.GetParameters()
                         .Count())
@@ -172,8 +172,8 @@ namespace Stator.Editor
             initStatements.Add(initField);
             foreach (var registration in builderInstance.Registrations)
             {
-                var leftInit = new CSharpSymbol($"_ResolveTable[typeof({registration.TypeFront.GetRightFullName()})]");
-                var rightInit = new CSharpSymbol($"(Func<object>){GetResolveNameFront(registration.TypeFront)}");
+                var leftInit = new CSharpSymbol($"_ResolveTable[typeof({registration.Binding.GetRightFullName()})]");
+                var rightInit = new CSharpSymbol($"(Func<object>){GetResolveNameFront(registration.Binding)}");
                 var resolverRow = new CSharpBinaryStatement(leftInit, rightInit, "=", true);
                 initStatements.Add(resolverRow);
             }

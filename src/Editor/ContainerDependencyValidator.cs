@@ -9,7 +9,14 @@ namespace Stator.Editor
         {
             foreach(var registration in factory.Registrations)
             {
-                var ctor = registration.TypeBack
+                if(!registration.Binding.IsAssignableFrom(registration.Implementation))
+                {
+                    errors.Add($"Registration resolving `{registration.Binding.GetRightFullName()}` "
+                        + $"not assingable from `{registration.Implementation.GetRightFullName()}`");
+                    continue;
+                }
+
+                var ctor = registration.Implementation
                     .GetConstructors()
                     .OrderBy(c => c.GetParameters()
                         .Count())
@@ -21,13 +28,13 @@ namespace Stator.Editor
                 foreach(var dependency in dependencies)
                 {
                     var isRegistred = factory.Registrations
-                        .Any(t => t.TypeFront == dependency);
+                        .Any(t => t.Binding == dependency);
                     
                     if (!isRegistred)
                     {
                         errors.Add($"Missing dependency `{dependency.GetRightFullName()}` " 
-                            + $"for implementation `{registration.TypeBack.GetRightFullName()}` "
-                            + $"and resolving type `{registration.TypeFront.GetRightFullName()}`");
+                            + $"for implementation `{registration.Implementation.GetRightFullName()}` "
+                            + $"and resolving type `{registration.Binding.GetRightFullName()}`");
                     }
                 }
             }

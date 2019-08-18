@@ -5,25 +5,27 @@ namespace Stator
 {
     public abstract class ContainerFactory : IContainerFactory
     {
-        public List<ContainerRegistration> Registrations { get; private set; }
+        public IEnumerable<ContainerRegistration> Registrations => _registrations;
+        private List<ContainerRegistration> _registrations;
 
         public ContainerFactory()
         {
-            Registrations = new List<ContainerRegistration>();
+            _registrations = new List<ContainerRegistration>();
         }
 
         protected ContainerFactory Add(ContainerRegistration registration)
         {
-            Registrations.Add(registration);
+            _registrations.Add(registration);
             return this;
         }
 
         protected ContainerFactory AddSingleton<TBind, TImpl>()
+            where TImpl : TBind
         {
             Add(new ContainerRegistration
             {
-                TypeFront = typeof(TBind),
-                TypeBack = typeof(TImpl),
+                Binding = typeof(TBind),
+                Implementation = typeof(TImpl),
                 Lifetime = LifetimeScope.Singleton
             });
             return this;
@@ -36,11 +38,12 @@ namespace Stator
         }
 
         protected ContainerFactory AddTransient<TBind, TImpl>()
+            where TImpl : TBind
         {
             Add(new ContainerRegistration
             {
-                TypeFront = typeof(TBind),
-                TypeBack = typeof(TImpl),
+                Binding = typeof(TBind),
+                Implementation = typeof(TImpl),
                 Lifetime = LifetimeScope.Singleton
             });
             return this;
