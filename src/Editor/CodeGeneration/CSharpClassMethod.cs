@@ -11,6 +11,7 @@ namespace Stator.Editor
         public IEnumerable<MethodParameter> Parameters { get; set; }
         public bool IsPublic { get; set; }
         public IEnumerable<CSharpStatement> Statements { get; set; }
+        public string[] Modificators { get; set; }
 
         public CSharpClassMethod(Type returnType, string name, bool isPublic)
         {
@@ -28,16 +29,28 @@ namespace Stator.Editor
             Statements = statements;
         }
 
+        public CSharpClassMethod(Type returnType, string name, IEnumerable<MethodParameter> parameters, bool isPublic, IEnumerable<CSharpStatement> statements, string[] modificators)
+            : this(returnType, name, parameters, isPublic, statements)
+        {
+            Modificators = modificators;
+        }
+
         public override void Generate(IndentedStringBuilder stringBuilder)
         {
             var accessMode = IsPublic ? "public" : "private";
+            var modifers = "";
+            if(Modificators != null)
+            {
+                modifers = " " + string.Join(" ", Modificators);
+            }
+
             var returnType = ReturnType == typeof(void) ? "void" : ReturnType.GetRightFullName();
             var parameters = string.Join(", ", Parameters.Select(t => t.ToString()));
-            stringBuilder.AppendLine($"{accessMode} {returnType} {Name}({parameters})");
+            stringBuilder.AppendLine($"{accessMode}{modifers} {returnType} {Name}({parameters})");
             stringBuilder.AppendLine("{");
 
             var indentedBuilde = new IndentedStringBuilder(stringBuilder.Builder, stringBuilder.CurrentIndend + 1);
-            foreach(var statement in Statements)
+            foreach (var statement in Statements)
             {
                 statement.Generate(indentedBuilde);
             }

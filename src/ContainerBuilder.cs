@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Stator
 {
@@ -37,6 +38,11 @@ namespace Stator
                 Lifetime = LifetimeScope.Singleton
             });
             return this;
+        }
+
+        public virtual object Resolve(Type type)
+        {
+            throw new NotImplementedException($"Not implemented resolver for type {this.GetType()}. Generate it!");
         }
     }
 }

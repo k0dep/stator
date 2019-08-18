@@ -41,6 +41,7 @@ namespace Stator.Editor
             members.AddRange(CreateSingletons(builderInstance));
             members.AddRange(CreateTransients(builderInstance));
             members.AddRange(CreateResolvers(builderInstance));
+            members.AddRange(CreateMainResolver(builderInstance));
             members = members.OrderByDescending(m => m.GetType().ToString()).ToList();
 
             var className = builder.Name;
@@ -76,7 +77,7 @@ namespace Stator.Editor
                     ifStatement,
                     new CSharpReturn(new CSharpSymbol(fieldName))
                 };
-                var resolveName = "F_" + GetResolveName(singleton.TypeFront);
+                var resolveName = GetResolveNameFront(singleton.TypeFront);
                 var resolveMethod = new CSharpClassMethod(singleton.TypeFront, resolveName,
                                                 new MethodParameter[0], true, resolveBody);
                 members.Add(resolveMethod);
@@ -100,7 +101,7 @@ namespace Stator.Editor
                     resultStatement,
                     new CSharpReturn(new CSharpSymbol("result"))
                 };
-                var resolveName = "F_" + GetResolveName(transient.TypeFront);
+                var resolveName = GetResolveNameFront(transient.TypeFront);
                 var resolveMethod = new CSharpClassMethod(transient.TypeFront, resolveName,
                                                 new MethodParameter[0], true, resolveBody);
                 members.Add(resolveMethod);
@@ -125,7 +126,7 @@ namespace Stator.Editor
                 foreach (var parameter in ctor.GetParameters())
                 {
                     var paramType = parameter.ParameterType;
-                    var resolveInvoke = new CSharpInvoke("F_" + GetResolveName(paramType), new CSharpStatement[0]);
+                    var resolveInvoke = new CSharpInvoke(GetResolveNameFront(paramType), new CSharpStatement[0]);
                     var variableDependency = new CSharpInitVariable(null, GetDependencyName(paramType), resolveInvoke);
                     statements.Add(variableDependency);
                 }
@@ -134,11 +135,11 @@ namespace Stator.Editor
                     .Select(t => t.ParameterType)
                     .Select(GetDependencyName)
                     .Select(p => new CSharpSymbol(p));
-                
+
                 var resultVariable = new CSharpInitVariable(null, "result", new CSharpNewObject(targetType, @params));
                 statements.Add(resultVariable);
                 statements.Add(new CSharpReturn(new CSharpSymbol("result")));
-                
+
                 var resolveName = GetResolveName(targetType);
                 var resolveMethod = new CSharpClassMethod(targetType, resolveName,
                                                 new MethodParameter[0], true, statements);
@@ -149,9 +150,50 @@ namespace Stator.Editor
         }
 
 
+        private IEnumerable<CSharpClassMember> CreateMainResolver(ContainerBuilder builderInstance)
+        {
+            var members = new List<CSharpClassMember>();
+
+            var field = new CSharpField(typeof(IDictionary<Type, Func<object>>), "_ResolveTable", false);
+            members.Add(field);
+
+            var initStatements = new List<CSharpStatement>();
+            foreach (var registration in builderInstance.Registrations)
+            {
+                var leftInit = new CSharpSymbol($"_ResolveTable[typeof({registration.TypeFront.GetRightFullName()})]");
+                var rightInit = new CSharpSymbol($"(Func<object>){GetResolveNameFront(registration.TypeFront)}");
+                var resolverRow = new CSharpBinaryStatement(leftInit, rightInit, "=", true);
+                initStatements.Add(resolverRow);
+            }
+
+            var ifStatement = new CSharpIf(new CSharpBinaryStatement(new CSharpSymbol("_ResolveTable"), CSharpSymbol.NULL, "=="), initStatements);
+
+            var resolver = new CSharpInitVariable(null, "resolver", new CSharpSymbol("_ResolveTable[target]"));
+            var resultVariable = new CSharpInitVariable(null, "result", new CSharpInvoke("resolver", new CSharpStatement[0]));
+            
+            var statements = new List<CSharpStatement>();
+            statements.Add(ifStatement);
+            statements.Add(resolver);
+            statements.Add(resultVariable);
+            statements.Add(new CSharpReturn(new CSharpSymbol("result")));
+
+            var resolveMethod = new CSharpClassMethod(typeof(object), nameof(ContainerBuilder.Resolve),
+                                            new MethodParameter[]{new MethodParameter(typeof(Type), "target")},
+                                            true, statements, new []{"override"});
+            members.Add(resolveMethod);
+
+            return members;
+        }
+
+
         public string GetSingletonName(Type type)
         {
             return $"i_{GetTypeSafeName(type)}";
+        }
+
+        public string GetResolveNameFront(Type type)
+        {
+            return $"F_Resolve_{GetTypeSafeName(type)}";
         }
 
         public string GetResolveName(Type type)
