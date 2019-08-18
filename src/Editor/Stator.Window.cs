@@ -43,6 +43,8 @@ namespace Stator.Editor
                 Directory.CreateDirectory(Path.Combine(Application.dataPath, "stator_builders"));
                 File.WriteAllText(Path.Combine(Application.dataPath, "stator_builders", "builder_" + factoryType.GetTypeSafeName() + ".cs"), code);
             }
+
+            AssetDatabase.Refresh();
         }
     }
 }

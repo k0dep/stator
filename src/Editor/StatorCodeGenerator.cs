@@ -161,10 +161,15 @@ namespace Stator.Editor
         {
             var members = new List<CSharpClassMember>();
 
-            var field = new CSharpField(typeof(IDictionary<Type, Func<object>>), "_ResolveTable", false);
+            var tableType = typeof(IDictionary<Type, Func<object>>);
+            var tableTypeImpl = typeof(Dictionary<Type, Func<object>>);
+            var field = new CSharpField(tableType, "_ResolveTable", false);
             members.Add(field);
 
             var initStatements = new List<CSharpStatement>();
+            var initField = new CSharpBinaryStatement(new CSharpSymbol("_ResolveTable"),
+                new CSharpNewObject(tableTypeImpl, new CSharpStatement[0]), "=", true);
+            initStatements.Add(initField);
             foreach (var registration in builderInstance.Registrations)
             {
                 var leftInit = new CSharpSymbol($"_ResolveTable[typeof({registration.TypeFront.GetRightFullName()})]");
