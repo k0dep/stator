@@ -1,7 +1,8 @@
 ﻿using System;
 using UnityEngine;
 using UnityEditor;
-
+using System.Linq;
+using System.IO;
 
 namespace Stator.Editor
 {
@@ -19,8 +20,27 @@ namespace Stator.Editor
         {
             if (GUILayout.Button("Generate"))
             {
-                var generator = new StatorCodeGenerator();
-                generator.Generate();
+                Generate();
+            }
+        }
+
+        private void Generate()
+        {
+            var generator = new StatorCodeGenerator();
+
+            var factoryBaseType = typeof(ContainerFactory);
+            var factoryTypes = AppDomain.CurrentDomain
+                .GetAssemblies()
+                .SelectMany(a => a.GetTypes())
+                .Where(t => factoryBaseType.IsAssignableFrom(t))
+                .Where(t => t != factoryBaseType)
+                .ToArray();
+            
+            foreach (var factoryType in factoryTypes)
+            {
+                var code = generator.Generate(factoryType);
+                Directory.CreateDirectory(Path.Combine(Application.dataPath, "stator_builders"));
+                File.WriteAllText(Path.Combine(Application.dataPath, "stator_builders", "builder_" + factoryType.GetTypeSafeName() + ".cs"), code);
             }
         }
     }

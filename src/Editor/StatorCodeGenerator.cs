@@ -1,37 +1,34 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
-using UnityEngine;
 
 namespace Stator.Editor
 {
     public class StatorCodeGenerator
     {
-        public void Generate()
+        public string Generate(Type factory)
         {
-            var builderType = typeof(ContainerBuilder);
-            var builders = AppDomain.CurrentDomain
-                .GetAssemblies()
-                .SelectMany(a => a.GetTypes())
-                .Where(t => builderType.IsAssignableFrom(t))
-                .Where(t => t != builderType)
-                .ToArray();
-
-            foreach (var builder in builders)
+            if (!typeof(ContainerFactory).IsAssignableFrom(factory))
             {
-                GenerateForBuilder(builder);
+                throw new ArgumentException($"Type {factory} not inherits from {nameof(ContainerFactory)}");
             }
+
+            CheckDependencies();
+
+            return GenerateFactory(factory);
         }
 
-        private void GenerateForBuilder(Type builder)
+        public void CheckDependencies()
         {
-            var builderInstance = Activator.CreateInstance(builder) as ContainerBuilder;
+        }
+
+        private string GenerateFactory(Type factory)
+        {
+            var builderInstance = Activator.CreateInstance(factory) as ContainerFactory;
             if (builderInstance == null)
             {
-                Debug.Log($"Cant create builde for type {builder}");
-                return;
+                throw new ArgumentException($"Cant create factory for type {factory}. Missing default constructor.");
             }
 
             var code = new StringBuilder();
@@ -44,18 +41,17 @@ namespace Stator.Editor
             members.AddRange(CreateMainResolver(builderInstance));
             members = members.OrderByDescending(m => m.GetType().ToString()).ToList();
 
-            var className = builder.Name;
+            var className = factory.Name;
             var type = new CSharpClass(className, members, true);
-            var ns = new CSharpNamespace(builder.Namespace, new CSharpClass[] { type });
+            var ns = new CSharpNamespace(factory.Namespace, new CSharpClass[] { type });
             var file = new CSharpFile(new string[] { "System" }, new CSharpNamespace[] { ns });
 
             file.Generate(codeBuilder);
 
-            Directory.CreateDirectory(Path.Combine(Application.dataPath, "stator_builders"));
-            File.WriteAllText(Path.Combine(Application.dataPath, "stator_builders", "builder_" + GetTypeSafeName(builder) + ".cs"), code.ToString());
+            return codeBuilder.ToString();
         }
 
-        private IEnumerable<CSharpClassMember> CreateSingletons(ContainerBuilder builderInstance)
+        private IEnumerable<CSharpClassMember> CreateSingletons(ContainerFactory builderInstance)
         {
             var members = new List<CSharpClassMember>();
             var singletons = builderInstance.Registrations
@@ -86,7 +82,7 @@ namespace Stator.Editor
             return members;
         }
 
-        private IEnumerable<CSharpClassMember> CreateTransients(ContainerBuilder builderInstance)
+        private IEnumerable<CSharpClassMember> CreateTransients(ContainerFactory builderInstance)
         {
             var members = new List<CSharpClassMember>();
             var transients = builderInstance.Registrations
@@ -110,7 +106,7 @@ namespace Stator.Editor
             return members;
         }
 
-        private IEnumerable<CSharpClassMember> CreateResolvers(ContainerBuilder builderInstance)
+        private IEnumerable<CSharpClassMember> CreateResolvers(ContainerFactory builderInstance)
         {
             var members = new List<CSharpClassMember>();
 
@@ -150,7 +146,7 @@ namespace Stator.Editor
         }
 
 
-        private IEnumerable<CSharpClassMember> CreateMainResolver(ContainerBuilder builderInstance)
+        private IEnumerable<CSharpClassMember> CreateMainResolver(ContainerFactory builderInstance)
         {
             var members = new List<CSharpClassMember>();
 
@@ -177,7 +173,7 @@ namespace Stator.Editor
             statements.Add(resultVariable);
             statements.Add(new CSharpReturn(new CSharpSymbol("result")));
 
-            var resolveMethod = new CSharpClassMethod(typeof(object), nameof(ContainerBuilder.Resolve),
+            var resolveMethod = new CSharpClassMethod(typeof(object), nameof(ContainerFactory.Resolve),
                                             new MethodParameter[]{new MethodParameter(typeof(Type), "target")},
                                             true, statements, new []{"override"});
             members.Add(resolveMethod);
@@ -188,35 +184,22 @@ namespace Stator.Editor
 
         public string GetSingletonName(Type type)
         {
-            return $"i_{GetTypeSafeName(type)}";
+            return $"i_{type.GetTypeSafeName()}";
         }
 
         public string GetResolveNameFront(Type type)
         {
-            return $"F_Resolve_{GetTypeSafeName(type)}";
+            return $"F_Resolve_{type.GetTypeSafeName()}";
         }
 
         public string GetResolveName(Type type)
         {
-            return $"Resolve_{GetTypeSafeName(type)}";
+            return $"Resolve_{type.GetTypeSafeName()}";
         }
 
         public string GetDependencyName(Type type)
         {
-            return $"dep_{GetTypeSafeName(type)}";
-        }
-
-        public string GetTypeSafeName(Type type)
-        {
-            var ns = type.Namespace?.GetHashCode().ToString("X");
-            var name = ns + "_" + type.Name.Replace('.', '_').Replace('`', '_').Replace('*', '_');
-            if (type.IsGenericType)
-            {
-                var paramerets = type.GetGenericArguments();
-                name += "_" + string.Join("_", paramerets.Select(GetTypeSafeName).ToArray());
-            }
-
-            return name;
+            return $"dep_{type.GetTypeSafeName()}";
         }
     }
 }

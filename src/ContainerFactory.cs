@@ -3,22 +3,22 @@ using System.Collections.Generic;
 
 namespace Stator
 {
-    public abstract class ContainerBuilder
+    public abstract class ContainerFactory : IContainerFactory
     {
         public List<ContainerRegistration> Registrations { get; private set; }
 
-        public ContainerBuilder()
+        public ContainerFactory()
         {
-            this.Registrations = new List<ContainerRegistration>();
+            Registrations = new List<ContainerRegistration>();
         }
 
-        public ContainerBuilder Add(ContainerRegistration registration)
+        protected ContainerFactory Add(ContainerRegistration registration)
         {
             Registrations.Add(registration);
             return this;
         }
 
-        public ContainerBuilder AddSingleton<TBind, TImpl>()
+        protected ContainerFactory AddSingleton<TBind, TImpl>()
         {
             Add(new ContainerRegistration
             {
@@ -28,15 +28,27 @@ namespace Stator
             });
             return this;
         }
-        
-        public ContainerBuilder AddSingleton<TBindAndImpl>()
+
+        protected ContainerFactory AddSingleton<TBindAndImpl>()
+        {
+            AddTransient<TBindAndImpl, TBindAndImpl>();
+            return this;
+        }
+
+        protected ContainerFactory AddTransient<TBind, TImpl>()
         {
             Add(new ContainerRegistration
             {
-                TypeFront = typeof(TBindAndImpl),
-                TypeBack = typeof(TBindAndImpl),
+                TypeFront = typeof(TBind),
+                TypeBack = typeof(TImpl),
                 Lifetime = LifetimeScope.Singleton
             });
+            return this;
+        }
+
+        protected ContainerFactory AddTransient<TBindAndImpl>()
+        {
+            AddTransient<TBindAndImpl, TBindAndImpl>();
             return this;
         }
 

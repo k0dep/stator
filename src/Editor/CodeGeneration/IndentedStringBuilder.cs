@@ -47,5 +47,10 @@ namespace Stator.Editor
         {
             Builder.AppendLine();
         }
+
+        public override string ToString()
+        {
+            return Builder.ToString();
+        }
     }
 }

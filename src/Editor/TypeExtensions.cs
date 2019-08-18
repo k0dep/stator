@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 
 namespace Stator.Editor
 {
@@ -35,6 +36,18 @@ namespace Stator.Editor
             }
 
             return friendlyName;
+        }
+
+        public static string GetTypeSafeName(this Type type)
+        {
+            var ns = type.Namespace?.GetHashCode().ToString("X");
+            var name = ns + "_" + type.Name.Replace('.', '_').Replace('`', '_').Replace('*', '_');
+            if (type.IsGenericType)
+            {
+                var paramerets = type.GetGenericArguments();
+                name += "_" + string.Join("_", paramerets.Select(GetTypeSafeName).ToArray());
+            }
+            return name;
         }
     }
 }
