@@ -26,7 +26,8 @@ namespace Stator.Editor
 
         private void Generate()
         {
-            var generator = new StatorCodeGenerator();
+            var validator = new ContainerDependencyValidator();
+            var generator = new StatorCodeGenerator(validator);
 
             var factoryBaseType = typeof(ContainerFactory);
             var factoryTypes = AppDomain.CurrentDomain

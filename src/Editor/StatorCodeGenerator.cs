@@ -7,6 +7,13 @@ namespace Stator.Editor
 {
     public class StatorCodeGenerator
     {
+        public ContainerDependencyValidator Validator { get; set; }
+
+        public StatorCodeGenerator(ContainerDependencyValidator validator)
+        {
+            Validator = validator;
+        }
+
         public string Generate(Type factory)
         {
             if (!typeof(ContainerFactory).IsAssignableFrom(factory))
@@ -14,36 +21,41 @@ namespace Stator.Editor
                 throw new ArgumentException($"Type {factory} not inherits from {nameof(ContainerFactory)}");
             }
 
-            CheckDependencies();
-
-            return GenerateFactory(factory);
-        }
-
-        public void CheckDependencies()
-        {
-        }
-
-        private string GenerateFactory(Type factory)
-        {
             var builderInstance = Activator.CreateInstance(factory) as ContainerFactory;
             if (builderInstance == null)
             {
-                throw new ArgumentException($"Cant create factory for type {factory}. Missing default constructor.");
+                throw new ArgumentException($"Cant create factory for factorytype {factory}. Missing default constructor.");
             }
 
+            CheckDependencies(builderInstance);
+
+            return GenerateFactory(factory, builderInstance);
+        }
+
+        public void CheckDependencies(ContainerFactory instance)
+        {
+            var errors = new List<string>();
+            if (!Validator.Validate(instance, errors))
+            {
+                throw new ArgumentException("Generation error:\n" + string.Join("\n", errors));
+            }
+        }
+
+        private string GenerateFactory(Type factoryType, ContainerFactory instance)
+        {
             var code = new StringBuilder();
             var codeBuilder = new IndentedStringBuilder(code, 0);
 
             var members = new List<CSharpClassMember>();
-            members.AddRange(CreateSingletons(builderInstance));
-            members.AddRange(CreateTransients(builderInstance));
-            members.AddRange(CreateResolvers(builderInstance));
-            members.AddRange(CreateMainResolver(builderInstance));
+            members.AddRange(CreateSingletons(instance));
+            members.AddRange(CreateTransients(instance));
+            members.AddRange(CreateResolvers(instance));
+            members.AddRange(CreateMainResolver(instance));
             members = members.OrderByDescending(m => m.GetType().ToString()).ToList();
 
-            var className = factory.Name;
+            var className = factoryType.Name;
             var type = new CSharpClass(className, members, true);
-            var ns = new CSharpNamespace(factory.Namespace, new CSharpClass[] { type });
+            var ns = new CSharpNamespace(factoryType.Namespace, new CSharpClass[] { type });
             var file = new CSharpFile(new string[] { "System" }, new CSharpNamespace[] { ns });
 
             file.Generate(codeBuilder);
@@ -145,7 +157,6 @@ namespace Stator.Editor
             return members;
         }
 
-
         private IEnumerable<CSharpClassMember> CreateMainResolver(ContainerFactory builderInstance)
         {
             var members = new List<CSharpClassMember>();
@@ -166,7 +177,7 @@ namespace Stator.Editor
 
             var resolver = new CSharpInitVariable(null, "resolver", new CSharpSymbol("_ResolveTable[target]"));
             var resultVariable = new CSharpInitVariable(null, "result", new CSharpInvoke("resolver", new CSharpStatement[0]));
-            
+
             var statements = new List<CSharpStatement>();
             statements.Add(ifStatement);
             statements.Add(resolver);
@@ -174,13 +185,12 @@ namespace Stator.Editor
             statements.Add(new CSharpReturn(new CSharpSymbol("result")));
 
             var resolveMethod = new CSharpClassMethod(typeof(object), nameof(ContainerFactory.Resolve),
-                                            new MethodParameter[]{new MethodParameter(typeof(Type), "target")},
-                                            true, statements, new []{"override"});
+                                            new MethodParameter[] { new MethodParameter(typeof(Type), "target") },
+                                            true, statements, new[] { "override" });
             members.Add(resolveMethod);
 
             return members;
         }
-
 
         public string GetSingletonName(Type type)
         {
