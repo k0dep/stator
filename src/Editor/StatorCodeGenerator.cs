@@ -8,10 +8,12 @@ namespace Stator.Editor
     public class StatorCodeGenerator
     {
         public ContainerDependencyValidator Validator { get; set; }
+        public IDictionary<Type, ICodeRegistrationGenerator> RegistrationGenerators { get; set; }
 
-        public StatorCodeGenerator(ContainerDependencyValidator validator)
+        public StatorCodeGenerator(ContainerDependencyValidator validator, IDictionary<Type, ICodeRegistrationGenerator> registrationGenerators)
         {
             Validator = validator;
+            RegistrationGenerators = registrationGenerators;
         }
 
         public string Generate(Type factory)
@@ -47,9 +49,14 @@ namespace Stator.Editor
             var codeBuilder = new IndentedStringBuilder(code, 0);
 
             var members = new List<CSharpClassMember>();
-            members.AddRange(CreateSingletons(instance));
-            members.AddRange(CreateTransients(instance));
-            members.AddRange(CreateResolvers(instance));
+
+            foreach(var registration in instance.Registrations)
+            {
+                var generator = RegistrationGenerators[registration.GetType()];
+                var result = generator.Generate(registration);
+                members.AddRange(result);
+            }
+
             members.AddRange(CreateMainResolver(instance));
             members = members.OrderByDescending(m => m.GetType().ToString()).ToList();
 
@@ -61,100 +68,6 @@ namespace Stator.Editor
             file.Generate(codeBuilder);
 
             return codeBuilder.ToString();
-        }
-
-        private IEnumerable<CSharpClassMember> CreateSingletons(ContainerFactory builderInstance)
-        {
-            var members = new List<CSharpClassMember>();
-            var singletons = builderInstance.Registrations
-                .Where(t => t.Lifetime == LifetimeScope.Singleton).ToArray();
-
-            foreach (var singleton in singletons)
-            {
-                var fieldName = GetSingletonName(singleton.Binding);
-                var field = new CSharpField(singleton.Binding, fieldName, false);
-                members.Add(field);
-
-                var backResolveMethod = GetResolveName(singleton.Implementation);
-                var condition = new CSharpBinaryStatement(new CSharpSymbol(fieldName), CSharpSymbol.NULL, "==");
-                var statements = new CSharpStatement[] {
-                    new CSharpBinaryStatement(new CSharpSymbol(fieldName), new CSharpInvoke(backResolveMethod, new CSharpStatement[0]), "=", true),
-                };
-                var ifStatement = new CSharpIf(condition, statements);
-                var resolveBody = new CSharpStatement[]{
-                    ifStatement,
-                    new CSharpReturn(new CSharpSymbol(fieldName))
-                };
-                var resolveName = GetResolveNameFront(singleton.Binding);
-                var resolveMethod = new CSharpClassMethod(singleton.Binding, resolveName,
-                                                new MethodParameter[0], true, resolveBody);
-                members.Add(resolveMethod);
-            }
-
-            return members;
-        }
-
-        private IEnumerable<CSharpClassMember> CreateTransients(ContainerFactory builderInstance)
-        {
-            var members = new List<CSharpClassMember>();
-            var transients = builderInstance.Registrations
-                .Where(t => t.Lifetime == LifetimeScope.Transient).ToArray();
-
-            foreach (var transient in transients)
-            {
-                var backResolveMethod = GetResolveName(transient.Implementation);
-
-                var resultStatement = new CSharpInitVariable(null, "result", new CSharpInvoke(backResolveMethod, new CSharpStatement[0]));
-                var resolveBody = new CSharpStatement[]{
-                    resultStatement,
-                    new CSharpReturn(new CSharpSymbol("result"))
-                };
-                var resolveName = GetResolveNameFront(transient.Binding);
-                var resolveMethod = new CSharpClassMethod(transient.Binding, resolveName,
-                                                new MethodParameter[0], true, resolveBody);
-                members.Add(resolveMethod);
-            }
-
-            return members;
-        }
-
-        private IEnumerable<CSharpClassMember> CreateResolvers(ContainerFactory builderInstance)
-        {
-            var members = new List<CSharpClassMember>();
-
-            foreach (var registration in builderInstance.Registrations)
-            {
-                var targetType = registration.Implementation;
-                var ctor = targetType.GetConstructors()
-                    .OrderBy(c => c.GetParameters()
-                        .Count())
-                    .First();
-
-                var statements = new List<CSharpStatement>();
-                foreach (var parameter in ctor.GetParameters())
-                {
-                    var paramType = parameter.ParameterType;
-                    var resolveInvoke = new CSharpInvoke(GetResolveNameFront(paramType), new CSharpStatement[0]);
-                    var variableDependency = new CSharpInitVariable(null, GetDependencyName(paramType), resolveInvoke);
-                    statements.Add(variableDependency);
-                }
-
-                var @params = ctor.GetParameters()
-                    .Select(t => t.ParameterType)
-                    .Select(GetDependencyName)
-                    .Select(p => new CSharpSymbol(p));
-
-                var resultVariable = new CSharpInitVariable(null, "result", new CSharpNewObject(targetType, @params));
-                statements.Add(resultVariable);
-                statements.Add(new CSharpReturn(new CSharpSymbol("result")));
-
-                var resolveName = GetResolveName(targetType);
-                var resolveMethod = new CSharpClassMethod(targetType, resolveName,
-                                                new MethodParameter[0], true, statements);
-                members.Add(resolveMethod);
-            }
-
-            return members;
         }
 
         private IEnumerable<CSharpClassMember> CreateMainResolver(ContainerFactory builderInstance)
@@ -173,7 +86,7 @@ namespace Stator.Editor
             foreach (var registration in builderInstance.Registrations)
             {
                 var leftInit = new CSharpSymbol($"_ResolveTable[typeof({registration.Binding.GetRightFullName()})]");
-                var rightInit = new CSharpSymbol($"(Func<object>){GetResolveNameFront(registration.Binding)}");
+                var rightInit = new CSharpSymbol($"(Func<object>){registration.Binding.GetResolveNameBind()}");
                 var resolverRow = new CSharpBinaryStatement(leftInit, rightInit, "=", true);
                 initStatements.Add(resolverRow);
             }
@@ -195,26 +108,6 @@ namespace Stator.Editor
             members.Add(resolveMethod);
 
             return members;
-        }
-
-        public string GetSingletonName(Type type)
-        {
-            return $"i_{type.GetTypeSafeName()}";
-        }
-
-        public string GetResolveNameFront(Type type)
-        {
-            return $"F_Resolve_{type.GetTypeSafeName()}";
-        }
-
-        public string GetResolveName(Type type)
-        {
-            return $"Resolve_{type.GetTypeSafeName()}";
-        }
-
-        public string GetDependencyName(Type type)
-        {
-            return $"dep_{type.GetTypeSafeName()}";
         }
     }
 }

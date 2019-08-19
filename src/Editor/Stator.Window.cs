@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEditor;
 using System.Linq;
 using System.IO;
+using System.Collections.Generic;
 
 namespace Stator.Editor
 {
@@ -26,8 +27,18 @@ namespace Stator.Editor
 
         private void Generate()
         {
-            var validator = new ContainerDependencyValidator();
-            var generator = new StatorCodeGenerator(validator);
+            var validators = new Dictionary<Type, IRegistrationValidator>()
+            {
+                [typeof(ContainerRegistrationDirect)] = new DirectRegistrationValidator()
+            };
+
+            var generators = new Dictionary<Type, ICodeRegistrationGenerator>()
+            {
+                [typeof(ContainerRegistrationDirect)] = new DirectCodeRegistrationGenerator()
+            };
+
+            var validator = new ContainerDependencyValidator(validators);
+            var generator = new StatorCodeGenerator(validator, generators);
 
             var factoryBaseType = typeof(ContainerFactory);
             var factoryTypes = AppDomain.CurrentDomain

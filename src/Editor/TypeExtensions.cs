@@ -49,5 +49,26 @@ namespace Stator.Editor
             }
             return name;
         }
+
+        public static string GetSingletonFieldName(this Type type)
+        {
+            return $"i_{type.GetTypeSafeName()}";
+        }
+
+        public static string GetResolveNameBind(this Type type)
+        {
+            return $"F_Resolve_{type.GetTypeSafeName()}";
+        }
+
+        public static string GetResolveName(this Type type)
+        {
+            return $"Resolve_{type.GetTypeSafeName()}";
+        }
+
+        public static string GetDependencyName(this Type type)
+        {
+            return $"dep_{type.GetTypeSafeName()}";
+        }
+
     }
 }
