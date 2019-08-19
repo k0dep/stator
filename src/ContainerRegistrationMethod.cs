@@ -4,13 +4,13 @@ namespace Stator
 {
     public class ContainerRegistrationMethod : ContainerRegistration
     {
-        public ContainerRegistrationMethod(Type binding, Func<object> factoryMethod, LifetimeScope lifetime)
+        public string FactoryMethod { get; set; }
+
+        public ContainerRegistrationMethod(Type binding, string methodName, LifetimeScope lifetime)
         {
-            FactoryMethod = factoryMethod;
+            FactoryMethod = methodName;
             Binding = binding;
             Lifetime = lifetime;
         }
-
-        public Func<object> FactoryMethod { get; set; }
     }
 }
