@@ -32,6 +32,12 @@ namespace Stator
             return this;
         }
 
+        protected ContainerFactory AddSingleton<TBind>(string method)
+        {
+            Add(new ContainerRegistrationMethod(typeof(TBind), method, LifetimeScope.Singleton));
+            return this;
+        }
+
         protected ContainerFactory AddTransient<TBind, TImpl>()
             where TImpl : TBind
         {
@@ -45,9 +51,20 @@ namespace Stator
             return this;
         }
 
+        protected ContainerFactory AddTransient<TBind>(string method)
+        {
+            Add(new ContainerRegistrationMethod(typeof(TBind), method, LifetimeScope.Transient));
+            return this;
+        }
+
         public virtual object Resolve(Type type)
         {
             throw new NotImplementedException($"Not implemented resolver for type {this.GetType()}. Generate it!");
+        }
+
+        public T Resolve<T>()
+        {
+            return (T)Resolve(typeof(T));
         }
     }
 }

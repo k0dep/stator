@@ -48,7 +48,7 @@ namespace Stator.Editor
             };
             var resolveName = binding.GetResolveNameBind();
             var resolveMethod = new CSharpClassMethod(binding, resolveName,
-                                            new MethodParameter[0], true, resolveBody);
+                                            new MethodParameter[0], false, resolveBody);
             members.Add(resolveMethod);
 
             return members;
@@ -65,7 +65,7 @@ namespace Stator.Editor
             };
             var resolveName = registration.Binding.GetResolveName();
             var resolveMethod = new CSharpClassMethod(registration.Binding, resolveName,
-                                            new MethodParameter[0], true, resolveBody);
+                                            new MethodParameter[0], false, resolveBody);
             return resolveMethod;
         }
 
@@ -96,7 +96,7 @@ namespace Stator.Editor
 
             var resolveName = targetType.GetResolveName();
             var resolveMethod = new CSharpClassMethod(targetType, resolveName,
-                                            new MethodParameter[0], true, statements);
+                                            new MethodParameter[0], false, statements);
 
             return resolveMethod;
         }

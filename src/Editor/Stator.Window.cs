@@ -29,12 +29,14 @@ namespace Stator.Editor
         {
             var validators = new Dictionary<Type, IRegistrationValidator>()
             {
-                [typeof(ContainerRegistrationDirect)] = new DirectRegistrationValidator()
+                [typeof(ContainerRegistrationDirect)] = new DirectRegistrationValidator(),
+                [typeof(ContainerRegistrationMethod)] = new MethodRegistrationValidator()
             };
 
             var generators = new Dictionary<Type, ICodeRegistrationGenerator>()
             {
-                [typeof(ContainerRegistrationDirect)] = new DirectCodeRegistrationGenerator()
+                [typeof(ContainerRegistrationDirect)] = new DirectCodeRegistrationGenerator(),
+                [typeof(ContainerRegistrationMethod)] = new MethodCodeRegistrationGenerator()
             };
 
             var validator = new ContainerDependencyValidator(validators);
@@ -48,11 +50,13 @@ namespace Stator.Editor
                 .Where(t => t != factoryBaseType)
                 .ToArray();
             
+            var pathToGeneration = Path.Combine(Application.dataPath, "stator_builders");
+            Directory.Delete(pathToGeneration, true);
             foreach (var factoryType in factoryTypes)
             {
                 var code = generator.Generate(factoryType);
-                Directory.CreateDirectory(Path.Combine(Application.dataPath, "stator_builders"));
-                File.WriteAllText(Path.Combine(Application.dataPath, "stator_builders", "builder_" + factoryType.GetTypeSafeName() + ".cs"), code);
+                Directory.CreateDirectory(pathToGeneration);
+                File.WriteAllText(Path.Combine(pathToGeneration, "builder_" + factoryType.GetTypeSafeName() + ".cs"), code);
             }
 
             AssetDatabase.Refresh();

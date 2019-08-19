@@ -6,4 +6,12 @@ namespace Stator.Editor
     {
         void Validate(ContainerFactory factory, ContainerRegistration registration, IList<string> errors);
     }
+
+    public class MethodRegistrationValidator : IRegistrationValidator
+    {
+        public void Validate(ContainerFactory factory, ContainerRegistration registration, IList<string> errors)
+        {
+            
+        }
+    }
 }
