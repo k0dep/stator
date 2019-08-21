@@ -149,7 +149,7 @@ namespace Stator.Editor
             var fileForDelete = allFiles.Except(files);
             foreach (var deletingFile in fileForDelete)
             {
-                Info($"Remove old file {fileForDelete}");
+                Info($"Remove old file {deletingFile}");
                 File.Delete(deletingFile);
             }
 
