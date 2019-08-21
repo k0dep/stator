@@ -1,7 +1,7 @@
-Stator IoC container
-====================
+💉Stator IoC container
+======================
 
-Stator is an IOC container that uses code generation instead of reflection for managing and resolving dependencies as a basis.
+Stator is an IoC container that uses code generation instead of reflection for managing and resolving dependencies as a basis.
 > This repository is a UPM package.
 
 Example

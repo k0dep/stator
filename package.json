@@ -1,9 +1,9 @@
 {
   "name": "pro.kodep.stator",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "displayName": "Stator",
   "author": "Stanislav Petrov @k0dep <sv.petrov@kodep.pro>",
-  "description": "Stator ioc container",
+  "description": "💉Stator is an IoC container that uses code generation instead of reflection for managing and resolving dependencies as a basis",
   "dependencies": {},
   "unity": "2018.1"
 }
