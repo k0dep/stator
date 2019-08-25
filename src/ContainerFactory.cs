@@ -28,7 +28,7 @@ namespace Stator
 
         protected ContainerFactory AddSingleton<TBindAndImpl>()
         {
-            AddTransient<TBindAndImpl, TBindAndImpl>();
+            AddSingleton<TBindAndImpl, TBindAndImpl>();
             return this;
         }
 

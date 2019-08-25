@@ -1,37 +1,61 @@
-﻿using Stator;
-
-namespace StatorExample
+﻿namespace Stator.Tests
 {
-    public partial class TestContainerFactory : ContainerFactory
+    public partial class TestFactorySingletons : ContainerFactory
     {
-        public TestContainerFactory()
+        public TestFactorySingletons()
+        {
+            AddSingleton<Foo>();
+        }
+    }
+    
+    public partial class TestFactoryTransients : ContainerFactory
+    {
+        public TestFactoryTransients()
+        {
+            AddTransient<Foo>();
+        }
+    }
+    
+    public partial class TestFactoryTransientsWithSingletonDep : ContainerFactory
+    {
+        public TestFactoryTransientsWithSingletonDep()
         {
             AddSingleton<Foo>();
             AddTransient<Bar>();
         }
-
-        public Foo CreateFoo()
+    }
+    
+    public partial class TestFactoryFromMethodsSet1 : ContainerFactory
+    {
+        public TestFactoryFromMethodsSet1()
         {
-            return new Foo();
+            AddSingleton<Foo>(nameof(GetFooSingleton));
+            AddTransient<Bar>();
         }
 
-        public BarFoo CreateBarFoo()
+        private Foo GetFooSingleton()
         {
-            return new BarFoo();
+            return new Foo() {Payload = "GetFooSingleton"};
         }
     }
-
-    public partial class TestFactory : ContainerFactory
+    
+    public partial class TestFactoryFromMethodsSet2 : ContainerFactory
     {
-        public TestFactory()
+        public TestFactoryFromMethodsSet2()
         {
-            AddTransient<Foo>();
+            AddTransient<Foo>(nameof(GetFooFromTransient));
             AddTransient<Bar>();
+        }
+
+        private Foo GetFooFromTransient()
+        {
+            return new Foo() {Payload = "GetFooFromTransient"};
         }
     }
 
     public class Foo
     {
+        public string Payload;
     }
 
     public class Bar

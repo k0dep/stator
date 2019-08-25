@@ -10,7 +10,8 @@ namespace Stator.Editor
         public ContainerDependencyValidator Validator { get; set; }
         public IDictionary<Type, ICodeRegistrationGenerator> RegistrationGenerators { get; set; }
 
-        public StatorCodeGenerator(ContainerDependencyValidator validator, IDictionary<Type, ICodeRegistrationGenerator> registrationGenerators)
+        public StatorCodeGenerator(ContainerDependencyValidator validator,
+            IDictionary<Type, ICodeRegistrationGenerator> registrationGenerators)
         {
             Validator = validator;
             RegistrationGenerators = registrationGenerators;
@@ -26,7 +27,8 @@ namespace Stator.Editor
             var builderInstance = Activator.CreateInstance(factory) as ContainerFactory;
             if (builderInstance == null)
             {
-                throw new ArgumentException($"Cant create factory for factorytype {factory}. Missing default constructor.");
+                throw new ArgumentException(
+                    $"Cant create factory for factorytype {factory}. Missing default constructor.");
             }
 
             CheckDependencies(builderInstance);
@@ -50,7 +52,7 @@ namespace Stator.Editor
 
             var members = new List<CSharpClassMember>();
 
-            foreach(var registration in instance.Registrations)
+            foreach (var registration in instance.Registrations)
             {
                 var generator = RegistrationGenerators[registration.GetType()];
                 var result = generator.Generate(registration);
@@ -62,8 +64,8 @@ namespace Stator.Editor
 
             var className = factoryType.Name;
             var type = new CSharpClass(className, members, true);
-            var ns = new CSharpNamespace(factoryType.Namespace, new CSharpClass[] { type });
-            var file = new CSharpFile(new string[] { "System" }, new CSharpNamespace[] { ns });
+            var ns = new CSharpNamespace(factoryType.Namespace, new CSharpClass[] {type});
+            var file = new CSharpFile(new string[] {"System"}, new CSharpNamespace[] {ns});
 
             file.Generate(codeBuilder);
 
@@ -91,20 +93,28 @@ namespace Stator.Editor
                 initStatements.Add(resolverRow);
             }
 
-            var ifStatement = new CSharpIf(new CSharpBinaryStatement(new CSharpSymbol("_ResolveTable"), CSharpSymbol.NULL, "=="), initStatements);
+            var ifStatement =
+                new CSharpIf(new CSharpBinaryStatement(new CSharpSymbol("_ResolveTable"), CSharpSymbol.NULL, "=="),
+                    initStatements);
 
-            var resolver = new CSharpInitVariable(null, "resolver", new CSharpSymbol("_ResolveTable[target]"));
-            var resultVariable = new CSharpInitVariable(null, "result", new CSharpInvoke("resolver", new CSharpStatement[0]));
+            var throwStatement = new CSharpThrowStatement(new CSharpNewObject(typeof(StatorUnresolvedException),
+                new[] {new CSharpSymbol("target")}));
+            var resultVariable =
+                new CSharpInitVariable(null, "result", new CSharpInvoke("resolver", new CSharpStatement[0]));
+            var checkStatement =
+                new CSharpIf(
+                    new CSharpInvoke("_ResolveTable.TryGetValue",
+                        new CSharpStatement[] {new CSharpSymbol("target"), new CSharpSymbol("out var resolver")}),
+                    new CSharpStatement[] {resultVariable, new CSharpReturn(new CSharpSymbol("result"))});
 
             var statements = new List<CSharpStatement>();
             statements.Add(ifStatement);
-            statements.Add(resolver);
-            statements.Add(resultVariable);
-            statements.Add(new CSharpReturn(new CSharpSymbol("result")));
+            statements.Add(checkStatement);
+            statements.Add(throwStatement);
 
             var resolveMethod = new CSharpClassMethod(typeof(object), nameof(ContainerFactory.Resolve),
-                                            new MethodParameter[] { new MethodParameter(typeof(Type), "target") },
-                                            true, statements, new[] { "override" });
+                new MethodParameter[] {new MethodParameter(typeof(Type), "target")},
+                true, statements, new[] {"override"});
             members.Add(resolveMethod);
 
             return members;

@@ -1,69 +1,140 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using UnityEditor;
-using UnityEngine;
+﻿using UnityEditor;
+using UnityEngine.Assertions;
 
 namespace Stator.Tests
 {
-    public class StatorContainerFactoryUnitTests
+    public class StatorContainerFactoryUnitTests : UnitTests
     {
         [MenuItem("Window/Stator/Run unit tests")]
         public static void RunTests()
         {
-            var instance = new StatorContainerFactoryUnitTests();
-
-            var methods = instance.GetType()
-                .GetMethods(BindingFlags.Instance | BindingFlags.Public)
-                .Where(m => m.Name.StartsWith("Test_"))
-                .ToList();
-            
-            var passed = new List<string>();
-            var failed = new List<string>();
-
-            foreach (var testMethod in methods)
-            {
-                try
-                {
-                    testMethod.Invoke(instance, new object[0]);
-                    passed.Add($"<color=green>* {testMethod.Name} - OK</color>");
-                }
-                catch(Exception e)
-                {
-                    failed.Add($"<color=red>* {testMethod.Name} - FAIL</color>: {e.InnerException.ToString()}");
-                }
-            }
-
-            var message = string.Join("\n", failed.Union(passed));
-
-            if(failed.Count > 0)
-            {
-                EditorUtility.DisplayDialog("Stator unit tests", "Unit tests FAILED", "Ok");
-                Debug.LogError(message);
-            }
-            else
-            {
-                EditorUtility.DisplayDialog("Stator unit tests", "Unit tests PASS", "Ok");
-                Debug.Log(message);
-            }
+            new StatorContainerFactoryUnitTests().RunAll();
         }
 
-        public void Resolve_ShouldThrowBecouseNotRegistred()
+        public void Test_Resolve_ShouldThrowBecouseNotRegistred()
         {
             // Arrange
+            var container = new TestFactorySingletons();
+            
+            // Act/Assert
+            AssertThrow<StatorUnresolvedException>(() => container.Resolve<object>());
+        }
+        
+        public void Test_Resolve_ShouldReturnSomeObjectForSingleton()
+        {
+            // Arrange
+            var container = new TestFactorySingletons();
+            
             // Act
+            var fooFirst = container.Resolve<Foo>();
+            var fooSecond = container.Resolve<Foo>();
+            
             // Assert
+            Assert.IsNotNull(fooFirst);
+            Assert.IsNotNull(fooSecond);
+            Assert.AreEqual(fooFirst, fooSecond);
+        }
+        
+        public void Test_Resolve_ShouldReturnDifferentObjectForTransients()
+        {
+            // Arrange
+            var container = new TestFactoryTransients();
+            
+            // Act
+            var fooFirst = container.Resolve<Foo>();
+            var fooSecond = container.Resolve<Foo>();
+            
+            // Assert
+            Assert.IsNotNull(fooFirst);
+            Assert.IsNotNull(fooSecond);
+            Assert.AreNotEqual(fooFirst, fooSecond);
+        }
+        
+        public void Test_Resolve_ShouldReturnDiffTransientWithSomeSingletonDep()
+        {
+            // Arrange
+            var container = new TestFactoryTransientsWithSingletonDep();
+            
+            // Act
+            var barFirst = container.Resolve<Bar>();
+            var barSecond = container.Resolve<Bar>();
+            
+            // Assert
+            Assert.IsNotNull(barFirst);
+            Assert.IsNotNull(barFirst.Foo);
+            Assert.IsNotNull(barSecond);
+            Assert.IsNotNull(barSecond.Foo);
+            Assert.AreNotEqual(barFirst, barSecond);
+            Assert.AreEqual(barFirst.Foo, barSecond.Foo);
+        }
+        
+        public void Test_Resolve_ShouldReturnSomeObjectForSingletonUsingMethod()
+        {
+            // Arrange
+            var container = new TestFactoryFromMethodsSet1();
+            
+            // Act
+            var fooFirst = container.Resolve<Foo>();
+            var fooSecond = container.Resolve<Foo>();
+            
+            // Assert
+            Assert.IsNotNull(fooFirst);
+            Assert.IsNotNull(fooSecond);
+            Assert.AreEqual(fooFirst, fooSecond);
+            Assert.AreEqual(fooFirst.Payload, "GetFooSingleton");
+        }
+        
+        public void Test_Resolve_ShouldReturnDifferentObjectForTransientsUsingMethod()
+        {
+            // Arrange
+            var container = new TestFactoryFromMethodsSet2();
+            
+            // Act
+            var fooFirst = container.Resolve<Foo>();
+            var fooSecond = container.Resolve<Foo>();
+            
+            // Assert
+            Assert.IsNotNull(fooFirst);
+            Assert.IsNotNull(fooSecond);
+            Assert.AreNotEqual(fooFirst, fooSecond);
+            Assert.AreEqual(fooFirst.Payload, fooSecond.Payload);
+            Assert.AreEqual(fooFirst.Payload, "GetFooFromTransient");
+        }
+        
+        public void Test_Resolve_ShouldReturnDiffTransientWithSomeSingletonDepUsingMethod()
+        {
+            // Arrange
+            var container = new TestFactoryFromMethodsSet1();
+            
+            // Act
+            var barFirst = container.Resolve<Bar>();
+            var barSecond = container.Resolve<Bar>();
+            
+            // Assert
+            Assert.IsNotNull(barFirst);
+            Assert.IsNotNull(barFirst.Foo);
+            Assert.IsNotNull(barSecond);
+            Assert.IsNotNull(barSecond.Foo);
+            Assert.AreNotEqual(barFirst, barSecond);
+            Assert.AreEqual(barFirst.Foo, barSecond.Foo);
         }
 
-        public void Test_Ok()
+        public void Test_Resolve_ShouldReturnDiffTransientWithTransientDepUsingMethod()
         {
+            // Arrange
+            var container = new TestFactoryFromMethodsSet2();
 
-        }
+            // Act
+            var barFirst = container.Resolve<Bar>();
+            var barSecond = container.Resolve<Bar>();
 
-        public void Test_Fail()
-        {
-            throw new Exception();
+            // Assert
+            Assert.IsNotNull(barFirst);
+            Assert.IsNotNull(barFirst.Foo);
+            Assert.IsNotNull(barSecond);
+            Assert.IsNotNull(barSecond.Foo);
+            Assert.AreNotEqual(barFirst, barSecond);
+            Assert.AreNotEqual(barFirst.Foo, barSecond.Foo);
         }
     }
 }
