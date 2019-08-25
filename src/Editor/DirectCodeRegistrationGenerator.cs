@@ -63,7 +63,7 @@ namespace Stator.Editor
                 resultStatement,
                 new CSharpReturn(new CSharpSymbol("result"))
             };
-            var resolveName = registration.Binding.GetResolveName();
+            var resolveName = registration.Binding.GetResolveNameBind();
             var resolveMethod = new CSharpClassMethod(registration.Binding, resolveName,
                                             new MethodParameter[0], false, resolveBody);
             return resolveMethod;

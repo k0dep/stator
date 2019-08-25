@@ -35,8 +35,8 @@ namespace Stator.Editor
 
         private void Clean()
         {
-            var settings = new StatorSettings();
-            Directory.Delete(settings.PathToGenerate, true);
+            var service = new StatorRefreshService(new StatorSettings());
+            service.Clean();
             AssetDatabase.Refresh();
         }
     }

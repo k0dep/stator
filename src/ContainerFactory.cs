@@ -28,7 +28,7 @@ namespace Stator
 
         protected ContainerFactory AddSingleton<TBindAndImpl>()
         {
-            AddTransient<TBindAndImpl, TBindAndImpl>();
+            AddSingleton<TBindAndImpl, TBindAndImpl>();
             return this;
         }
 
@@ -41,7 +41,7 @@ namespace Stator
         protected ContainerFactory AddTransient<TBind, TImpl>()
             where TImpl : TBind
         {
-            Add(new ContainerRegistrationDirect(typeof(TBind), typeof(TImpl), LifetimeScope.Singleton));
+            Add(new ContainerRegistrationDirect(typeof(TBind), typeof(TImpl), LifetimeScope.Transient));
             return this;
         }
 
