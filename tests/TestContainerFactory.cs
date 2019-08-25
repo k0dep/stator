@@ -7,10 +7,7 @@ namespace StatorExample
         public TestContainerFactory()
         {
             AddSingleton<Foo>();
-            AddSingleton<Bar>();
-            AddSingleton<FooBar>();
-            AddSingleton<object>(nameof(CreateFoo));
-            AddTransient<BarFoo>(nameof(CreateBarFoo));
+            AddTransient<Bar>();
         }
 
         public Foo CreateFoo()
